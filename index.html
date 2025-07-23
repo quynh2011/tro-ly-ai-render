@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ lý AI Chuyển đổi Giọng nói</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .drop-zone-border {
+            border-style: dashed;
+        }
+        .drop-zone-over {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .error-message {
+            color: #dc2626; /* text-red-600 */
+            background-color: #fee2e2; /* bg-red-100 */
+            border-color: #fca5a5; /* border-red-300 */
+        }
+        .tab-button.active {
+            border-color: #3b82f6; /* border-blue-500 */
+            color: #3b82f6; /* text-blue-500 */
+            background-color: #eff6ff; /* bg-blue-50 */
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                    <svg class="w-8 h-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m12 7.5v-1.5m-12-6.75v1.5m6-7.5v1.5m-6.75 4.5H3m18 0h-3.75M9 12.75h6m-6-3h6m6 3v1.5m-18-4.5v-1.5m6.75 0H9m6 0h2.25" /></svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Trợ lý AI Chuyển đổi Giọng nói</h1>
+                <p class="text-slate-500 mt-2">Chuyển đổi file ghi âm hoặc video thành văn bản.</p>
+            </div>
+
+            <!-- Error Message Box -->
+            <div id="error-box" class="hidden p-4 mb-4 text-sm rounded-lg error-message" role="alert">
+                <span class="font-medium">Lỗi!</span> <span id="error-message"></span>
+            </div>
+
+            <!-- Input Method Tabs -->
+            <div id="input-selection" class="mb-4">
+                <div class="border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="input-tabs">
+                        <li class="mr-2"><button class="tab-button inline-block p-4 border-b-2 rounded-t-lg active" data-tab="upload-tab">Tải lên từ máy tính</button></li>
+                        <li class="mr-2"><button class="tab-button inline-block p-4 border-b-2 rounded-t-lg" data-tab="link-tab">Nhập từ liên kết</button></li>
+                    </ul>
+                </div>
+                <div id="tab-content">
+                    <div id="upload-tab" class="tab-pane">
+                        <label for="file-input" id="drop-zone" class="flex flex-col items-center justify-center w-full h-64 border-2 border-slate-300 drop-zone-border rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-10 h-10 mb-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                                <p class="mb-2 text-sm text-slate-500"><span class="font-semibold">Nhấn để chọn file</span> hoặc kéo thả</p>
+                                <p class="text-xs text-slate-500">MP3, WAV, MP4, MOV, v.v.</p>
+                            </div>
+                            <input id="file-input" type="file" class="hidden" accept="audio/*,video/*" />
+                        </label>
+                    </div>
+                    <div id="link-tab" class="tab-pane hidden">
+                        <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                            <label for="link-input" class="block mb-2 text-sm font-medium text-gray-900">Link Google Drive hoặc link công khai khác</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="url" id="link-input" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="https://drive.google.com/..." required>
+                                <button id="process-link-button" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300">Bắt đầu</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing and Result Area -->
+            <div id="status-area" class="hidden mt-6 text-center">
+                <div id="info-display" class="text-slate-600 bg-slate-100 p-3 rounded-lg flex items-center justify-between">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <svg id="info-icon" class="w-6 h-6 text-slate-500 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                        <span id="info-name" class="text-sm font-medium truncate"></span>
+                    </div>
+                    <button id="cancel-button" class="text-slate-500 hover:text-slate-700 flex-shrink-0 ml-2"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
+                <div id="loading-spinner" class="mt-6">
+                    <div class="flex items-center justify-center space-x-2"><div class="w-4 h-4 rounded-full animate-pulse bg-blue-600"></div><div class="w-4 h-4 rounded-full animate-pulse bg-blue-600" style="animation-delay: 0.2s;"></div><div class="w-4 h-4 rounded-full animate-pulse bg-blue-600" style="animation-delay: 0.4s;"></div></div>
+                    <p id="status-text" class="text-slate-500 text-sm mt-3">AI đang lắng nghe và phân tích...</p>
+                </div>
+                <div id="result-container" class="hidden mt-6">
+                    <h3 class="text-lg font-semibold text-slate-800 text-left mb-3">Kết quả chuyển đổi</h3>
+                    <div class="relative">
+                        <textarea id="result-text" readonly class="w-full h-48 p-4 border border-slate-200 rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"></textarea>
+                        <button id="copy-button" class="absolute top-3 right-3 bg-white p-2 rounded-md text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition"><svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375v-3.375a1.125 1.125 0 00-1.125-1.125h-1.5a1.125 1.125 0 00-1.125 1.125v3.375m-7.5-10.375h9.75" /></svg></button>
+                    </div>
+                    <p id="copy-feedback" class="text-sm text-green-600 mt-2 h-5"></p>
+                </div>
+            </div>
+
+        </div>
+        <footer class="text-center mt-6">
+            <p class="text-sm text-slate-500">Phát triển bởi Trợ lý AI chuyên nghiệp.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- CẤU HÌNH QUAN TRỌNG ---
+        // Dán địa chỉ máy chủ từ Render.com của bạn vào đây.
+        const RENDER_SERVER_URL = "https://your-service-name.onrender.com"; 
+
+        // --- DOM Elements ---
+        const fileInput = document.getElementById('file-input'), dropZone = document.getElementById('drop-zone'), linkInput = document.getElementById('link-input'), processLinkButton = document.getElementById('process-link-button'), inputSelection = document.getElementById('input-selection'), statusArea = document.getElementById('status-area'), infoName = document.getElementById('info-name'), cancelButton = document.getElementById('cancel-button'), loadingSpinner = document.getElementById('loading-spinner'), statusText = document.getElementById('status-text'), resultContainer = document.getElementById('result-container'), resultText = document.getElementById('result-text'), copyButton = document.getElementById('copy-button'), copyFeedback = document.getElementById('copy-feedback'), errorBox = document.getElementById('error-box'), errorMessage = document.getElementById('error-message'), inputTabs = document.getElementById('input-tabs');
+
+        // --- Event Listeners ---
+        fileInput.addEventListener('change', (e) => e.target.files.length && handleFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-zone-over'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-over'); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-over'); e.dataTransfer.files.length && handleFile(e.dataTransfer.files[0]); });
+        processLinkButton.addEventListener('click', handleLink);
+        cancelButton.addEventListener('click', resetUI);
+        copyButton.addEventListener('click', copyResultToClipboard);
+        inputTabs.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { const t = e.target.getAttribute('data-tab'); inputTabs.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.tab-pane').forEach(p => { p.id === t ? p.classList.remove('hidden') : p.classList.add('hidden'); }); } });
+
+        // --- Core Functions ---
+        async function handleFile(file) {
+            if (!checkServerUrl()) return;
+            setupProcessingUI(file.name);
+            const formData = new FormData();
+            formData.append('mediafile', file);
+            try {
+                statusText.textContent = 'Đang tải file lên máy chủ...';
+                const response = await fetch(`${RENDER_SERVER_URL}/transcribe-file`, { method: 'POST', body: formData });
+                if (!response.ok) throw new Error((await response.json()).message || `Lỗi máy chủ: ${response.status}`);
+                statusText.textContent = 'AI đang lắng nghe và phân tích...';
+                const result = await response.json();
+                showResult(result.transcription);
+            } catch (error) { handleError(error); }
+        }
+        async function handleLink() {
+            if (!checkServerUrl()) return;
+            const url = linkInput.value.trim();
+            if (!url || !url.startsWith('http')) { showError("Vui lòng nhập một đường link hợp lệ."); return; }
+            setupProcessingUI(url);
+            try {
+                statusText.textContent = 'Máy chủ đang truy cập link và tải file...';
+                const response = await fetch(`${RENDER_SERVER_URL}/transcribe-from-link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+                if (!response.ok) throw new Error((await response.json()).message || `Lỗi máy chủ: ${response.status}`);
+                statusText.textContent = 'AI đang lắng nghe và phân tích...';
+                const result = await response.json();
+                showResult(result.transcription);
+            } catch (error) { handleError(error); }
+        }
+        function showResult(transcription) { loadingSpinner.classList.add('hidden'); resultContainer.classList.remove('hidden'); resultText.value = transcription || "Không nhận dạng được nội dung."; }
+        function handleError(error) { console.error('Transcription Error:', error); showError('Không thể hoàn tất quá trình. ' + error.message); }
+        
+        // --- UI Helper Functions ---
+        function setupProcessingUI(info) { hideError(); infoName.textContent = info; inputSelection.classList.add('hidden'); statusArea.classList.remove('hidden'); loadingSpinner.classList.remove('hidden'); resultContainer.classList.add('hidden'); statusText.textContent = 'Đang chuẩn bị...'; }
+        function resetUI() { hideError(); fileInput.value = ''; linkInput.value = ''; inputSelection.classList.remove('hidden'); statusArea.classList.add('hidden'); copyFeedback.textContent = ''; }
+        function showError(message) { errorMessage.textContent = message; errorBox.classList.remove('hidden'); statusArea.classList.add('hidden'); }
+        function hideError() { if (!errorBox.classList.contains('hidden')) { errorBox.classList.add('hidden'); } }
+        function checkServerUrl() { if (RENDER_SERVER_URL.includes("your-service-name")) { showError("Vui lòng cập nhật biến RENDER_SERVER_URL trong mã nguồn với địa chỉ Render của bạn."); return false; } return true; }
+        function copyResultToClipboard() { navigator.clipboard.writeText(resultText.value).then(() => { copyFeedback.textContent = 'Đã sao chép!'; setTimeout(() => { copyFeedback.textContent = ''; }, 2000); }).catch(err => { copyFeedback.textContent = 'Lỗi sao chép!'; setTimeout(() => { copyFeedback.textContent = ''; }, 2000); }); }
+    </script>
+</body>
+</html>

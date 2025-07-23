@@ -1,0 +1,17 @@
+{
+  "name": "ai-transcription-server-render",
+  "version": "1.0.0",
+  "description": "Server for AI transcription app deployed on Render",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1"
+  },
+  "engines": {
+    "node": "16.x"
+  }
+}
