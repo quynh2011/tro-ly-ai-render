@@ -1,5 +1,5 @@
 // --- Import các thư viện cần thiết ---
-require('dotenv').config(); // Để đọc biến môi trường từ file .env (khi chạy local)
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -10,40 +10,51 @@ const { promisify } = require('util');
 
 // --- Cấu hình ---
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() }); // Lưu file vào bộ nhớ RAM
+const upload = multer({ storage: multer.memoryStorage() });
 const pipeline = promisify(stream.pipeline);
 
+// --- Cấu hình CORS chi tiết ---
+// Danh sách các tên miền được phép truy cập máy chủ
+const allowedOrigins = [
+  'https://quynh2011.github.io', // Link GitHub Pages của bạn
+  // Bạn có thể thêm các link khác ở đây nếu cần, ví dụ: 'http://localhost:3000' để test ở máy
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Nếu request không có origin (ví dụ: từ Postman) hoặc origin nằm trong danh sách cho phép
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200
+};
+
+// Sử dụng middleware CORS với cấu hình đã tạo
+app.use(cors(corsOptions));
+
 // --- Khởi tạo OpenAI Client ---
-// Rất quan trọng: Lấy API Key từ biến môi trường, không bao giờ viết trực tiếp vào code.
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// --- Cấu hình Middleware ---
-app.use(cors());
+// --- Cấu hình Middleware khác ---
 app.use(express.json());
 
 // --- Hàm xử lý chính ---
 
-/**
- * Hàm này nhận một buffer file âm thanh và gửi đến OpenAI Whisper để xử lý.
- * @param {Buffer} audioBuffer - Dữ liệu file âm thanh.
- * @param {string} originalname - Tên file gốc để OpenAI biết định dạng.
- * @returns {Promise<string>} - Văn bản đã được chuyển đổi.
- */
 async function transcribeAudio(audioBuffer, originalname) {
-  // OpenAI cần file được gửi dưới dạng stream, chúng ta tạo một stream từ buffer
   const audioStream = new stream.Readable();
   audioStream.push(audioBuffer);
   audioStream.push(null); 
-  
-  // Gán tên file cho stream để OpenAI nhận dạng được định dạng (mp3, wav, mp4...)
   audioStream.path = originalname;
 
   console.log('Bắt đầu gửi file đến OpenAI Whisper...');
   const transcription = await openai.audio.transcriptions.create({
     file: audioStream,
-    model: 'whisper-1', // Sử dụng model Whisper-1
+    model: 'whisper-1',
   });
   console.log('OpenAI đã xử lý xong.');
 
@@ -52,7 +63,6 @@ async function transcribeAudio(audioBuffer, originalname) {
 
 // --- Định nghĩa các API Endpoint ---
 
-// API để xử lý file tải lên từ máy tính
 app.post('/transcribe-file', upload.single('mediafile'), async (req, res) => {
   try {
     if (!req.file) {
@@ -62,12 +72,11 @@ app.post('/transcribe-file', upload.single('mediafile'), async (req, res) => {
     const transcriptText = await transcribeAudio(req.file.buffer, req.file.originalname);
     res.json({ transcription: transcriptText });
   } catch (error) {
-    console.error('Lỗi khi xử lý file:', error);
-    res.status(500).json({ message: 'Đã có lỗi xảy ra phía máy chủ.' });
+    console.error('Lỗi khi xử lý file:', error.message);
+    res.status(500).json({ message: 'Đã có lỗi xảy ra phía máy chủ khi xử lý file.' });
   }
 });
 
-// API để xử lý link (chỉ hoạt động với link tải trực tiếp)
 app.post('/transcribe-from-link', async (req, res) => {
   const { url } = req.body;
   if (!url) {
@@ -76,17 +85,14 @@ app.post('/transcribe-from-link', async (req, res) => {
 
   try {
     console.log(`Đang tải file từ link: ${url}`);
-    // Tải file từ URL về dưới dạng buffer
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     const audioBuffer = Buffer.from(response.data);
-    
-    // Lấy tên file từ URL để xác định định dạng
     const filename = url.split('/').pop().split('?')[0] || 'audio.mp3';
 
     const transcriptText = await transcribeAudio(audioBuffer, filename);
     res.json({ transcription: transcriptText });
   } catch (error) {
-    console.error('Lỗi khi xử lý link:', error);
+    console.error('Lỗi khi xử lý link:', error.message);
     res.status(500).json({ message: 'Không thể tải hoặc xử lý file từ link được cung cấp.' });
   }
 });
